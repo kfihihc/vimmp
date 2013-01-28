@@ -222,7 +222,7 @@ class Controller(object):
         r.wait()
         one = d[r.value()]
 
-        r = self.x.configval_get("playlist.repeat_all")
+        r = self.x.config_get_value("playlist.repeat_all")
         r.wait()
         all = d[r.value()]
 
