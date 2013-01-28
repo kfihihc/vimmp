@@ -2,6 +2,8 @@
 
 import os.path
 import os
+import sys
+sys.path.append('/usr/local/lib/python2.7/site-packages')
 import xmmsclient
 import urllib
 import locale
@@ -24,7 +26,7 @@ class Controller(object):
     def _get_status(self):
         r = self.x.playback_status()
         r.wait()
-        val = r.get_uint()
+        val = r.value()
         if val == xmmsclient.PLAYBACK_STATUS_PLAY:
             return "play"
         elif val == xmmsclient.PLAYBACK_STATUS_PAUSE:
@@ -47,7 +49,7 @@ class Controller(object):
         If the song to be removed is playing now, we first stop it.
         """
         if self._get_status() == "play" and self.current_position() == pos:
-                self.x.playback_stop().wait()
+            self.x.playback_stop().wait()
         self.x.playlist_remove_entry(pos).wait()
 
     def clear(self):
@@ -63,7 +65,7 @@ class Controller(object):
     def get_volume(self):
         r = self.x.playback_volume_get()
         r.wait()
-        return r.get_dict()['left']
+        return r.value()
 
     def _set_volume(self, val):
         self.x.playback_volume_set('left', val).wait()
@@ -97,7 +99,7 @@ class Controller(object):
         self.x.playlist_create(name).wait()
         r = self.x.playlist_list_entries()
         r.wait()
-        for i, id in enumerate(r.get_list()):
+        for i, id in enumerate(r.value()):
             self.x.playlist_insert_id(i, id, name).wait()
 
     def load_playlist(self, name):
@@ -106,12 +108,12 @@ class Controller(object):
     def get_playlists(self):
         r = self.x.playlist_list()
         r.wait()
-        return [x.encode(self.system_encoding) for x in r.get_list()]
+        return [x.encode(self.system_encoding) for x in r.value()]
 
     def get_current_playlist(self):
         r = self.x.playlist_current_active()
         r.wait()
-        return r.get_string().encode(self.system_encoding)
+        return r.value().encode(self.system_encoding)
 
     def add(self, path):
         url = 'file://' + path
@@ -132,11 +134,11 @@ class Controller(object):
                 print r.get_error(), "in Controller.current_position."
             return None
         else:
-            return r.get_dict()['position']
+            return r.value()['position']
 
     def playlist(self):
         """Format the playlist.
-        
+
         First we try to get imformation from id3v2, if it fails,
         then try id3, else we just display the file name.
         """
@@ -154,7 +156,7 @@ class Controller(object):
         lst = []
         r = self.x.playlist_list_entries()
         r.wait()
-        for id in r.get_list():
+        for id in r.value():
             r = self.x.medialib_get_info(id)
             r.wait()
             if r.iserror():
@@ -162,7 +164,7 @@ class Controller(object):
                     print r.get_error(), "in Controller.playlist."
                 lst.append(' ')
                 continue
-            song = r.get_propdict()
+            song = r.value()
             try:
                 artist = iconv(song[('plugin/id3v2', 'artist')])
             except KeyError:
@@ -202,7 +204,7 @@ class Controller(object):
 
     def set_repeat_mode(self, mode):
         def set(key, val):
-            self.x.configval_set(key, val).wait()
+            self.x.config_set_value(key, val).wait()
 
         if mode == "all":
             set("playlist.repeat_one", "0")
@@ -215,15 +217,15 @@ class Controller(object):
             set("playlist.repeat_all", "0")
 
     def get_repeat_mode(self):
-        d = { "0": False, "1": True }
-        r = self.x.configval_get("playlist.repeat_one")
+        d = {"0": False, "1": True}
+        r = self.x.config_get_value("playlist.repeat_one")
         r.wait()
-        one = d[r.get_string()]
+        one = d[r.value()]
 
         r = self.x.configval_get("playlist.repeat_all")
         r.wait()
-        all = d[r.get_string()]
-        
+        all = d[r.value()]
+
         if all:
             return "all"
         elif one:
